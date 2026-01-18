@@ -33,7 +33,7 @@ int main() {
     if (cmd::is_builtin(name)) {
       std::cout << name << " is a shell builtin\n";
     } else {
-      std::cout << name << ": command not found\n";
+      std::cerr << name << ": not found\n";
     }
     return 0;
   });
@@ -62,7 +62,7 @@ int main() {
     }
 
     if (!cmd::dispatch(tokens)) {
-      std::cerr << tokens[0] << ": command not found\n";
+      std::cerr << tokens[0] << ": not found\n";
     }
 
     std::cout << "$ ";
