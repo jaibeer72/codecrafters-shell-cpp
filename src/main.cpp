@@ -1,18 +1,13 @@
+#include "commands.h"
+#include <cstdlib>
+#include <functional>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
-#include <functional>
-#include <unordered_map>
-#include <cstdlib>
-
-using Handler = std::function<void(const std::vector<std::string> &)>;
-
-std::unordered_map<std::string, Handler> commands;
 
 // Current Commands
-std::vector<std::string> split_tokens(const std::string &s)
-{
+std::vector<std::string> split_tokens(const std::string &s) {
   std::vector<std::string> tokens;
   std::istringstream iss(s);
   std::string tok;
@@ -21,67 +16,55 @@ std::vector<std::string> split_tokens(const std::string &s)
   return tokens;
 }
 
-int main()
-{
+int main() {
   // Flush after every std::cout / std::cerr
   std::cout << std::unitbuf;
   std::cerr << std::unitbuf;
 
-  commands["echo"] = [](const std::vector<std::string> &args)
-  {
-    bool newline = true;
-    size_t start = 0;
-    if (!args.empty() && args[0] == "-n")
-    {
-      newline = false;
-      start = 1;
-    }
-    for (size_t i = start; i < args.size(); ++i)
-    {
-      if (i != start)
-        std::cout << ' ';
-      std::cout << args[i];
-    }
-    if (newline)
-      std::cout << '\n';
-  };
+  cmd::register_default_builtins();
 
-  // simple exit builtin
-  commands["exit"] = [](const std::vector<std::string> &){ std::exit(0); };
+  // add a `type` builtin locally using the registry
+  cmd::register_builtin("type", [](const std::vector<std::string> &args) {
+    if (args.empty()) {
+      std::cout << "type: missing operand\n";
+      return 0;
+    }
+    const std::string &name = args[0];
+    if (cmd::is_builtin(name)) {
+      std::cout << name << " is a shell builtin\n";
+    } else {
+      std::cout << name << ": command not found\n";
+    }
+    return 0;
+  });
 
   std::cout << "$ ";
 
   std::string line;
-  while (std::getline(std::cin, line))
-  {
+  while (std::getline(std::cin, line)) {
 
     auto tokens = split_tokens(line);
     // strip any trailing CR (e.g. if input has \r) and tolerate pasted prompt
     for (auto &t : tokens) {
-      if (!t.empty() && t.back() == '\r') t.pop_back();
+      if (!t.empty() && t.back() == '\r')
+        t.pop_back();
     }
-    // if the user pasted the prompt like "$ echo", remove leading '$' on the first token
+    // if the user pasted the prompt like "$ echo", remove leading '$' on the
+    // first token
     if (!tokens.empty() && !tokens[0].empty() && tokens[0][0] == '$') {
       tokens[0] = tokens[0].substr(1);
-      if (tokens[0].empty() && tokens.size() > 1) tokens.erase(tokens.begin());
+      if (tokens[0].empty() && tokens.size() > 1)
+        tokens.erase(tokens.begin());
     }
-    if (tokens.empty())
-    {
+    if (tokens.empty()) {
       std::cout << "$ ";
       continue;
     }
-    std::string cmd = tokens[0];
-    std::vector<std::string> args(tokens.begin() + 1, tokens.end());
 
-    auto it = commands.find(cmd);
-    if (it != commands.end())
-    {
-      it->second(args);
+    if (!cmd::dispatch(tokens)) {
+      std::cerr << tokens[0] << ": command not found\n";
     }
-    else
-    {
-      std::cerr << cmd << ": command not found\n";
-    }
+
     std::cout << "$ ";
   }
 
