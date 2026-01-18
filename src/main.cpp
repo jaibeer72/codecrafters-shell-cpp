@@ -10,6 +10,10 @@ int main() {
 
   std::string line;
   while (std::getline(std::cin, line)) {
+
+    if(line == "exit") {
+      break;
+    }
     // treat everything as an error
     std::cerr << line << ": command not found\n";
     std::cout << "$ ";
