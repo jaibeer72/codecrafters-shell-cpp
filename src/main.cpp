@@ -23,21 +23,6 @@ int main() {
 
   cmd::register_default_builtins();
 
-  // add a `type` builtin locally using the registry
-  cmd::register_builtin("type", [](const std::vector<std::string> &args) {
-    if (args.empty()) {
-      std::cout << "type: missing operand\n";
-      return 0;
-    }
-    const std::string &name = args[0];
-    if (cmd::is_builtin(name)) {
-      std::cout << name << " is a shell builtin\n";
-    } else {
-      std::cerr << name << ": not found\n";
-    }
-    return 0;
-  });
-
   std::cout << "$ ";
 
   std::string line;
