@@ -11,8 +11,7 @@ int main() {
   std::string line;
   while (std::getline(std::cin, line)) {
     // treaating everything to be an error 
-    std::cout << "\n" << line << ": command not found" << std::endl;
-    std::cout << "$ "; 
+    std::cout << "\n" << line << ": command not found";
 
   }
 }
