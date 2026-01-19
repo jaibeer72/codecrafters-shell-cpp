@@ -47,7 +47,13 @@ int main() {
     }
 
     if (!cmd::dispatch(tokens)) {
-      std::cerr << tokens[0] << ": not found\n";
+      std::string path; 
+      if(!cmd::is_external_command(tokens[0], path)){
+        std::cerr << tokens[0] << ": not found\n";
+        continue;
+      }
+
+      cmd::dispatch_external(tokens, path); 
     }
 
     std::cout << "$ ";

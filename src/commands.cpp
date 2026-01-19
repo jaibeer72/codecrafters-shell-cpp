@@ -8,6 +8,35 @@ namespace {
 static std::unordered_map<std::string, cmd::Handler> builtins;
 }
 
+static int try_get_exe_path(const std::string &path, const std::string &name, std::string &outPath) {
+  size_t start = 0; 
+
+  while (start <= path.size()) {
+    // Find next ':' separator (npos means "not found", i.e., last directory)
+    size_t pos = path.find(':', start); 
+    std::string dir = (pos == std::string::npos) 
+                    ? path.substr(start)           
+                    : path.substr(start, pos - start); 
+    
+    if (dir.empty()) dir = "."; 
+
+    std::string full = dir + "/" + name; 
+
+
+    if (access(full.c_str(), F_OK) == 0 && access(full.c_str(), X_OK) == 0) {
+      outPath = full; 
+      return 0;  
+    }
+
+    if (pos == std::string::npos)
+      break;
+    
+    start = pos + 1;
+  }
+  
+  return -1;  // Not found in any directory
+}
+
 void cmd::register_builtin(const std::string &name, Handler h) {
   builtins[name] = std::move(h);
 }
@@ -23,8 +52,46 @@ bool cmd::dispatch(const std::vector<std::string> &tokens) {
   return true;
 }
 
+bool cmd::dispatch_external(const std::vector<std::string> &tokens, const std::string &path)
+{
+   std::vector<char*> argv (tokens.size() +1); 
+   std::transform(tokens.begin(), tokens.end(), argv.begin(),
+  [](const std::string& s){ return const_cast<char*>(s.c_str()); });
+
+  argv.back() = nullptr;
+
+  pid_t pid = fork();
+  if(pid < 0) {
+    std::cerr << "Fork failed\n"; 
+    return false; 
+  }
+  if(pid == 0) {
+    execv(path.c_str(), argv.data());
+    std::exit(1); 
+  }
+
+  waitpid(pid, nullptr, 0);
+  return true; 
+}
+
 bool cmd::is_builtin(const std::string &name) {
   return builtins.find(name) != builtins.end();
+}
+
+bool cmd::is_external_command(const std::string &name, std::string &out_path)
+{
+  const char *path_env = std::getenv("PATH");
+  if (!path_env)
+  {
+    std::cerr << name << ": not found\n";
+    return false;
+  }
+
+  std::string path(path_env); 
+  int res_state = try_get_exe_path(path, name , out_path); 
+  if(res_state == -1) return false; 
+
+  return true;
 }
 
 static int builtin_echo(const std::vector<std::string> &args) {
