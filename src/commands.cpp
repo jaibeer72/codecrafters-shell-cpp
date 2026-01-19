@@ -1,6 +1,7 @@
 #include "commands.h"
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <sys/wait.h>
 #include <unistd.h>
