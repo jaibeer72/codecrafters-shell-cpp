@@ -96,6 +96,26 @@ bool cmd::is_external_command(const std::string &name, std::string &out_path)
   return true;
 }
 
+static int builtin_cd(const std::vector<std::string> &args){
+   const char* path; 
+
+   if(args.empty()){
+    path = std::getenv("HOME"); 
+    if(!path){ 
+      std::cerr << "cd: home not set"; 
+      return 1; 
+    }
+    }else{ 
+      path = args[0].c_str(); 
+    }
+
+    if(chdir(path)!=0){
+      std::cerr << "cd: " << path << ": " << strerror(errno) << '\n';
+      return 1;
+    }
+   return 0; 
+}
+
 static int builtin_pwd(const std::vector<std::string> &) {
   char buf[4096];
   if (getcwd(buf, sizeof(buf)) != nullptr) {
@@ -190,4 +210,5 @@ void cmd::register_default_builtins() {
   register_builtin("exit", builtin_exit);
   register_builtin("type", builtin_type);
   register_builtin("pwd", builtin_pwd);
+  register_builtin("cd",builtin_cd);
 }
