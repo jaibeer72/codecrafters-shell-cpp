@@ -7,44 +7,50 @@
 #include <unistd.h>
 #include <unordered_map>
 
-namespace {
-static std::unordered_map<std::string, cmd::Handler> builtins;
+namespace
+{
+  static std::unordered_map<std::string, cmd::Handler> builtins;
 }
 
-static int try_get_exe_path(const std::string &path, const std::string &name, std::string &outPath) {
-  size_t start = 0; 
+static int try_get_exe_path(const std::string &path, const std::string &name, std::string &outPath)
+{
+  size_t start = 0;
 
-  while (start <= path.size()) {
+  while (start <= path.size())
+  {
     // Find next ':' separator (npos means "not found", i.e., last directory)
-    size_t pos = path.find(':', start); 
-    std::string dir = (pos == std::string::npos) 
-                    ? path.substr(start)           
-                    : path.substr(start, pos - start); 
-    
-    if (dir.empty()) dir = "."; 
+    size_t pos = path.find(':', start);
+    std::string dir = (pos == std::string::npos)
+                          ? path.substr(start)
+                          : path.substr(start, pos - start);
 
-    std::string full = dir + "/" + name; 
+    if (dir.empty())
+      dir = ".";
 
+    std::string full = dir + "/" + name;
 
-    if (access(full.c_str(), F_OK) == 0 && access(full.c_str(), X_OK) == 0) {
-      outPath = full; 
-      return 0;  
+    if (access(full.c_str(), F_OK) == 0 && access(full.c_str(), X_OK) == 0)
+    {
+      outPath = full;
+      return 0;
     }
 
     if (pos == std::string::npos)
       break;
-    
+
     start = pos + 1;
   }
-  
-  return -1;  // Not found in any directory
+
+  return -1; // Not found in any directory
 }
 
-void cmd::register_builtin(const std::string &name, Handler h) {
+void cmd::register_builtin(const std::string &name, Handler h)
+{
   builtins[name] = std::move(h);
 }
 
-bool cmd::dispatch(const std::vector<std::string> &tokens) {
+bool cmd::dispatch(const std::vector<std::string> &tokens)
+{
   if (tokens.empty())
     return true;
   auto it = builtins.find(tokens[0]);
@@ -57,27 +63,31 @@ bool cmd::dispatch(const std::vector<std::string> &tokens) {
 
 bool cmd::dispatch_external(const std::vector<std::string> &tokens, const std::string &path)
 {
-   std::vector<char*> argv (tokens.size() +1); 
-   std::transform(tokens.begin(), tokens.end(), argv.begin(),
-  [](const std::string& s){ return const_cast<char*>(s.c_str()); });
+  std::vector<char *> argv(tokens.size() + 1);
+  std::transform(tokens.begin(), tokens.end(), argv.begin(),
+                 [](const std::string &s)
+                 { return const_cast<char *>(s.c_str()); });
 
   argv.back() = nullptr;
 
   pid_t pid = fork();
-  if(pid < 0) {
-    std::cerr << "Fork failed\n"; 
-    return false; 
+  if (pid < 0)
+  {
+    std::cerr << "Fork failed\n";
+    return false;
   }
-  if(pid == 0) {
+  if (pid == 0)
+  {
     execv(path.c_str(), argv.data());
-    std::exit(1); 
+    std::exit(1);
   }
 
   waitpid(pid, nullptr, 0);
-  return true; 
+  return true;
 }
 
-bool cmd::is_builtin(const std::string &name) {
+bool cmd::is_builtin(const std::string &name)
+{
   return builtins.find(name) != builtins.end();
 }
 
@@ -90,52 +100,78 @@ bool cmd::is_external_command(const std::string &name, std::string &out_path)
     return false;
   }
 
-  std::string path(path_env); 
-  int res_state = try_get_exe_path(path, name , out_path); 
-  if(res_state == -1) return false; 
+  std::string path(path_env);
+  int res_state = try_get_exe_path(path, name, out_path);
+  if (res_state == -1)
+    return false;
 
   return true;
 }
 
-static int builtin_cd(const std::vector<std::string> &args){
-   const char* path; 
+static int builtin_cd(const std::vector<std::string> &args)
+{
+  const char *path;
 
-   if(args.empty()){
-    path = std::getenv("HOME"); 
-    if(!path){ 
-      std::cerr << "cd: home not set"; 
-      return 1; 
-    }
-    }else{ 
-      path = args[0].c_str(); 
-    }
-
-    if(chdir(path)!=0){
-      std::cerr << "cd: " << path << ": " << strerror(errno) << '\n';
+  if (args.empty())
+  {
+    path = std::getenv("HOME");
+    if (!path)
+    {
+      std::cerr << "cd: home not set";
       return 1;
     }
-   return 0; 
+  }
+  else
+  {
+    if (args[0] == "~")
+    {
+      path = std::getenv("HOME");
+      if (!path)
+      {
+        std::cerr << "cd: home not set";
+        return 1;
+      }
+    }
+    else
+    {
+      path = args[0].c_str();
+    }
+  }
+
+  if (chdir(path) != 0)
+  {
+    std::cerr << "cd: " << path << ": " << strerror(errno) << '\n';
+    return 1;
+  }
+  return 0;
 }
 
-static int builtin_pwd(const std::vector<std::string> &) {
+static int builtin_pwd(const std::vector<std::string> &)
+{
   char buf[4096];
-  if (getcwd(buf, sizeof(buf)) != nullptr) {
+  if (getcwd(buf, sizeof(buf)) != nullptr)
+  {
     std::cout << buf << '\n';
     return 0;
-  } else {
+  }
+  else
+  {
     std::perror("pwd");
     return 1;
   }
 }
 
-static int builtin_echo(const std::vector<std::string> &args) {
+static int builtin_echo(const std::vector<std::string> &args)
+{
   bool newline = true;
   size_t i = 0;
-  if (!args.empty() && args[0] == "-n") {
+  if (!args.empty() && args[0] == "-n")
+  {
     newline = false;
     i = 1;
   }
-  for (; i < args.size(); ++i) {
+  for (; i < args.size(); ++i)
+  {
     if (i != (newline ? 0 : 1))
       std::cout << ' ';
     std::cout << args[i];
@@ -155,26 +191,31 @@ echo is a shell builtin
 The tester will execute your program with a custom PATH like this:
 usage PATH="/usr/bin:/usr/local/bin:$PATH" ./your_program.sh
 */
-static int builtin_type(const std::vector<std::string> &args) {
-  if (args.empty()) {
+static int builtin_type(const std::vector<std::string> &args)
+{
+  if (args.empty())
+  {
     std::cout << "type: missing operand\n";
     return 0;
   }
   const std::string &name = args[0];
-  if (cmd::is_builtin(name)) {
+  if (cmd::is_builtin(name))
+  {
     std::cout << name << " is a shell builtin\n";
     return 0;
   }
 
   const char *path_env = std::getenv("PATH");
-  if (!path_env) {
+  if (!path_env)
+  {
     std::cout << name << ": not found\n";
     return 0;
   }
 
   std::string path(path_env);
   size_t start = 0;
-  while (start <= path.size()) {
+  while (start <= path.size())
+  {
     size_t pos = path.find(':', start);
     std::string dir = (pos == std::string::npos)
                           ? path.substr(start)
@@ -184,8 +225,10 @@ static int builtin_type(const std::vector<std::string> &args) {
     std::string full = dir + "/" + name;
 
     // check existence and exec permission
-    if (access(full.c_str(), F_OK) == 0) {
-      if (access(full.c_str(), X_OK) == 0) {
+    if (access(full.c_str(), F_OK) == 0)
+    {
+      if (access(full.c_str(), X_OK) == 0)
+      {
         std::cout << name << " is " << full << '\n';
         return 0;
       }
@@ -201,15 +244,17 @@ static int builtin_type(const std::vector<std::string> &args) {
   return 0;
 }
 
-static int builtin_exit(const std::vector<std::string> &) {
+static int builtin_exit(const std::vector<std::string> &)
+{
   std::exit(0);
   return 0; // unreachable
 }
 
-void cmd::register_default_builtins() {
+void cmd::register_default_builtins()
+{
   register_builtin("echo", builtin_echo);
   register_builtin("exit", builtin_exit);
   register_builtin("type", builtin_type);
   register_builtin("pwd", builtin_pwd);
-  register_builtin("cd",builtin_cd);
+  register_builtin("cd", builtin_cd);
 }
