@@ -7,6 +7,7 @@
 #include <vector>
 
 // Current Commands
+// TODO : rework this
 std::vector<std::string> split_tokens(const std::string &s) {
   std::vector<std::string> tokens;
   std::istringstream iss(s);
