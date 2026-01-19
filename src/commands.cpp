@@ -96,6 +96,17 @@ bool cmd::is_external_command(const std::string &name, std::string &out_path)
   return true;
 }
 
+static int builtin_pwd(const std::vector<std::string> &) {
+  char buf[4096];
+  if (getcwd(buf, sizeof(buf)) != nullptr) {
+    std::cout << buf << '\n';
+    return 0;
+  } else {
+    std::perror("pwd");
+    return 1;
+  }
+}
+
 static int builtin_echo(const std::vector<std::string> &args) {
   bool newline = true;
   size_t i = 0;
@@ -178,4 +189,5 @@ void cmd::register_default_builtins() {
   register_builtin("echo", builtin_echo);
   register_builtin("exit", builtin_exit);
   register_builtin("type", builtin_type);
+  register_builtin("pwd", builtin_pwd);
 }
