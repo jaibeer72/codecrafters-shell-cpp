@@ -52,7 +52,9 @@ int main() {
         std::cerr << tokens[0] << ": not found\n";
       }
 
-      cmd::dispatch_external(tokens, path); 
+      if(!cmd::dispatch_external(tokens, path)) {
+        std::cerr << tokens[0] << ": execution failed\n";
+      }
     }
 
     std::cout << "$ ";
