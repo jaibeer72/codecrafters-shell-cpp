@@ -1,6 +1,8 @@
 #include "commands.h"
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <unordered_map>
 
